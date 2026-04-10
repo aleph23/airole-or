@@ -1,7 +1,6 @@
 'use client'
 
 import type React from 'react'
-
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,6 +42,7 @@ import {
 import type { TavernCardV2, EventBook, ChatMessage, CharacterVersion, CharacterBook } from '@/lib/types'
 import { detectSystemLanguage, UI_TEXTS } from '@/lib/i18n'
 import { extractJsonFromContent, exportAsJson, exportAsPng, getLanguagePrompts } from '@/lib/utils'
+import { resilientParse } from '@/lib/json-repair'
 import { SettingsDialog } from '@/components/SettingsDialog'
 import { WelcomeScreen } from '@/components/WelcomeScreen'
 import { CharacterImageUpload } from '@/components/CharacterImageUpload'
@@ -154,6 +154,11 @@ export default function CharacterCardGenerator() {
   const [lastAnalyzedImage, setLastAnalyzedImage] = useState<string | null>(null)
   const [hasAnalysisRun, setHasAnalysisRun] = useState(false)
 
+  // Analysis streaming state
+  const [analysisStreamContent, setAnalysisStreamContent] = useState('')
+  const [analysisTruncated, setAnalysisTruncated] = useState(false)
+  const [analysisRawContent, setAnalysisRawContent] = useState('')
+
   // Initialize ephemeral session ID on mount (not saved to localStorage)
   useEffect(() => {
     setActiveSessionId(crypto.randomUUID())
@@ -164,7 +169,7 @@ export default function CharacterCardGenerator() {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
-  // 等待客户端挂载完成
+  // Wait for client mounting to complete
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -172,14 +177,14 @@ export default function CharacterCardGenerator() {
   // Get current UI texts based on interface language
   const t = UI_TEXTS[interfaceLanguage]
 
-  // 获取当前语言的调整方案
+  // Get the adjustment plan for the current language
   const getAdjustmentPresets = () => {
     return ADJUSTMENT_PRESETS[interfaceLanguage] || ADJUSTMENT_PRESETS.zh
   }
 
   // 从localStorage加载所有数据
   useEffect(() => {
-    // 加载设置
+    // Load settings
     const savedApiKey = localStorage.getItem('character-generator-api-key')
     const savedApiBaseUrl = localStorage.getItem('character-generator-api-base-url')
     const savedImageModel = localStorage.getItem('character-generator-image-model')
@@ -189,21 +194,21 @@ export default function CharacterCardGenerator() {
     const savedCustomLanguage = localStorage.getItem('character-generator-custom-language')
     const savedInterfaceLanguage = localStorage.getItem('character-generator-interface-language')
 
-    // 加载角色数据
+    // Load character data
     const savedCharacterData = localStorage.getItem('character-generator-character-data')
     const savedCharacterImage = localStorage.getItem('character-generator-character-image')
 
-    // 加载版本数据
+    // Load version data
     const savedVersions = localStorage.getItem('character-generator-versions')
     const savedCurrentVersionId = localStorage.getItem('character-generator-current-version-id')
 
-    // 加载聊天记录
+    // Load chat history
     const savedMessages = localStorage.getItem('character-generator-chat-messages')
 
-    // 加载事件书数据
+    // Load event book data
     const savedEventBook = localStorage.getItem('character-generator-event-book')
 
-    // 确定界面语言
+    // Determine interface language
     let currentInterfaceLanguage: 'zh' | 'en' = 'en'
     if (savedInterfaceLanguage) {
       currentInterfaceLanguage = savedInterfaceLanguage as 'zh' | 'en'
@@ -215,15 +220,15 @@ export default function CharacterCardGenerator() {
       setInterfaceLanguage(currentInterfaceLanguage)
     }
 
-    // 根据界面语言获取默认配置
+    // Get the default configuration based on the interface language
     const languageConfig = getLanguageSpecificConfig(currentInterfaceLanguage)
 
     if (savedApiKey) {
       setApiKey(savedApiKey)
-      setShowWelcome(false) // 如果有保存的API Key，不显示欢迎界面
+      setShowWelcome(false) //If there is a saved API Key, the welcome interface will not be displayed.
     }
 
-    // 如果没有保存的配置，使用基于语言的默认配置
+    // If there is no saved configuration, the language-based default configuration is used
     if (savedApiBaseUrl) {
       setApiBaseUrl(savedApiBaseUrl)
     } else {
@@ -251,7 +256,7 @@ export default function CharacterCardGenerator() {
     if (savedLanguage) setLanguage(savedLanguage)
     if (savedCustomLanguage) setCustomLanguage(savedCustomLanguage)
 
-    // 恢复角色数据
+    // Restore character data
     if (savedCharacterData) {
       try {
         const parsedCharacterData = JSON.parse(savedCharacterData)
@@ -261,11 +266,11 @@ export default function CharacterCardGenerator() {
       }
     }
 
-    // 恢复版本数据
+    // Restore version data
     if (savedVersions) {
       try {
         const parsedVersions = JSON.parse(savedVersions)
-        // 恢复Date对象
+        // Restore Date object
         const versionsWithDates = parsedVersions.map((version: any) => ({
           ...version,
           timestamp: new Date(version.timestamp),
@@ -280,16 +285,16 @@ export default function CharacterCardGenerator() {
       setCurrentVersionId(savedCurrentVersionId)
     }
 
-    // 恢复角色图片
+    // Restore character picture
     if (savedCharacterImage) {
       setCharacterImage(savedCharacterImage)
     }
 
-    // 恢复聊天记录
+    // Restore chat history
     if (savedMessages) {
       try {
         const parsedMessages = JSON.parse(savedMessages)
-        // 恢复Date对象
+        // Restore Date object
         const messagesWithDates = parsedMessages.map((msg: any) => ({ ...msg, timestamp: new Date(msg.timestamp) }))
         setMessages(messagesWithDates)
       } catch (error) {
@@ -297,7 +302,7 @@ export default function CharacterCardGenerator() {
       }
     }
 
-    // 恢复事件书
+    // Recovery event book
     if (savedEventBook) {
       try {
         const parsedEventBook = JSON.parse(savedEventBook)
@@ -308,7 +313,7 @@ export default function CharacterCardGenerator() {
     }
   }, [])
 
-  // 持久化角色数据
+  // Persistent role data
   useEffect(() => {
     localStorage.setItem('character-generator-character-data', JSON.stringify(characterData))
   }, [characterData])
@@ -514,7 +519,7 @@ export default function CharacterCardGenerator() {
         const imageDataUrl = e.target?.result as string
         setCharacterImage(imageDataUrl)
 
-        // 分析图片内容
+        // Analyze image content
         if (apiKey) {
           await analyzeImage(imageDataUrl)
         }
@@ -523,19 +528,45 @@ export default function CharacterCardGenerator() {
     }
   }
 
-  const analyzeImage = async (imageDataUrl: string) => {
+  const analyzeImage = async (imageDataUrl: string, continuationContent?: string) => {
     if (!apiKey) {
       alert(t.pleaseSetApiKey)
       return
     }
 
     setGlobalLoading({ isLoading: true, status: t.analyzingImage, type: 'image' })
-
-    // Capture the session ID when the analysis starts
+    setAnalysisTruncated(false)
     const currentSessionId = activeSessionId
+    let rawAccumulated = continuationContent || ''
 
     try {
       const prompts = getLanguagePrompts(language, customLanguage)
+
+      const messages = continuationContent
+        ? [
+            {
+              role: 'system',
+              content:
+                'You were creating a role play character card but ran out of response tokens. PLease finish the card.  As a reiminder, here is the partial output so far:\n\n' +
+                continuationContent +
+                '\n\nContinue generating from EXACTLY where you left off. Do not repeat anything. Output ONLY the JSON continuation.',
+            },
+            { role: 'user', content: [{ type: 'text', text: 'Continue the character card JSON.' }] },
+          ]
+        : [
+            {
+              role: 'system',
+              content:
+                'You are an expert fiction author. Analyze images and generate character card data in valid JSON format only.',
+            },
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: prompts.imageAnalysis },
+                { type: 'image_url', image_url: { url: imageDataUrl } },
+              ],
+            },
+          ]
 
       const response = await fetch('/api/analyze-image', {
         method: 'POST',
@@ -549,55 +580,135 @@ export default function CharacterCardGenerator() {
         }),
       })
 
+      // Pre-stream error (non-200 without any tokens)
       if (!response.ok) {
-        throw new Error('Failed to analyze image')
+        const errBody = await response.json().catch(() => ({}))
+        const msg = errBody.error || 'Failed to analyze image'
+        throw new Error(
+          `${errBody.status || response.status}: ${msg}${errBody.provider ? ` (${errBody.provider})` : ''}`
+        )
       }
 
-      setGlobalLoading((prev) => ({ ...prev, status: t.processingCharacterData }))
-      const analysis = await response.json()
+      if (!response.body) throw new Error('Response body is null')
 
-      if (analysis.error) {
-        throw new Error(analysis.error)
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let lastParseTime = 0
+
+      // Update state for regeneration early so it's valid during continuation
+      if (!continuationContent) {
+        setLastAnalyzedImage(imageDataUrl)
+        setHasAnalysisRun(true)
       }
 
-      // Create the first version (image analysis version)
-      const updateData: Partial<TavernCardV2['data']> = {}
-      if (analysis.name) updateData.name = analysis.name
-      if (analysis.description) updateData.description = analysis.description
-      if (analysis.personality) updateData.personality = analysis.personality
-      if (analysis.scenario) updateData.scenario = analysis.scenario
-      if (analysis.first_mes) updateData.first_mes = analysis.first_mes
-      if (analysis.mes_example) updateData.mes_example = analysis.mes_example
-      if (analysis.tags && Array.isArray(analysis.tags)) updateData.tags = analysis.tags
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
 
-      // 处理角色书数据
-      if (analysis.character_book && typeof analysis.character_book === 'object') {
-        updateData.character_book = analysis.character_book
+        buffer += decoder.decode(value, { stream: true })
+
+        // Process complete SSE lines
+        while (true) {
+          const lineEnd = buffer.indexOf('\n')
+          if (lineEnd === -1) break
+          const line = buffer.slice(0, lineEnd).trim()
+          buffer = buffer.slice(lineEnd + 1)
+
+          // Ignore SSE comments (e.g. ": OPENROUTER PROCESSING")
+          if (line.startsWith(':')) continue
+
+          if (line.startsWith('data: ')) {
+            const payload = line.slice(6)
+            if (payload === '[DONE]') break // shouldn't happen with our format but safe
+
+            try {
+              const event = JSON.parse(payload)
+
+              if (event.type === 'token') {
+                rawAccumulated += event.content
+                setAnalysisStreamContent(rawAccumulated)
+
+                // Progressive parse: try every 500ms
+                const now = Date.now()
+                if (now - lastParseTime > 500) {
+                  lastParseTime = now
+                  try {
+                    const { data } = resilientParse(rawAccumulated)
+                    applyAnalysisFields(data, currentSessionId)
+                  } catch {
+                    /* partial data not yet parseable */
+                  }
+                }
+              }
+
+              if (event.type === 'done') {
+                setAnalysisRawContent(rawAccumulated)
+
+                if (event.finish_reason === 'error') {
+                  const msg = event.error?.message || 'Provider returned an error'
+                  throw new Error(msg)
+                }
+
+                if (event.finish_reason === 'length') {
+                  // Truncated — do a best-effort final parse, then show Continue button
+                  try {
+                    const { data } = resilientParse(rawAccumulated)
+                    applyAnalysisFields(data, currentSessionId)
+                  } catch {
+                    /* use whatever fields were progressively applied */
+                  }
+                  setAnalysisTruncated(true)
+                  setGlobalLoading({ isLoading: false, status: '', type: '' })
+                  toast({
+                    title: 'Response truncated',
+                    description: 'The model hit the token limit. Click "Continue" to generate the rest.',
+                    variant: 'default',
+                  })
+                  return
+                }
+
+                // finish_reason === 'stop' — final parse
+                const { data } = resilientParse(rawAccumulated)
+                applyAnalysisFields(data, currentSessionId)
+                setAnalysisStreamContent('')
+                setGlobalLoading({ isLoading: false, status: '', type: '' })
+                showAttributeUpdateNotification('image-analysis')
+              }
+            } catch (parseErr: any) {
+              // This is an error from our event processing, not a JSON parse error
+              if (parseErr.message && !parseErr.message.startsWith('Could not parse')) {
+                throw parseErr
+              }
+            }
+          }
+        }
       }
-
-      // 应用更新 - Pass the session ID to ensure it only applies if character hasn't changed
-      if (Object.keys(updateData).length > 0) {
-        createNewVersion(updateData, interfaceLanguage === 'zh' ? '图像分析 V1' : 'Image Analysis V1')
-      }
-
-      setGlobalLoading((prev) => ({ ...prev, status: t.characterGeneratedSuccessfully }))
-
-      // Update state for regeneration
-      setLastAnalyzedImage(imageDataUrl)
-      setHasAnalysisRun(true)
-
-      // 显示属性更新提示
-      setTimeout(() => {
-        setGlobalLoading({ isLoading: false, status: '', type: '' })
-
-        showAttributeUpdateNotification('image-analysis')
-      }, 2000)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error analyzing image:', error)
-      setGlobalLoading((prev) => ({ ...prev, status: t.failedToAnalyzeImage }))
-      setTimeout(() => setGlobalLoading({ isLoading: false, status: '', type: '' }), 3000)
-      alert(t.failedToAnalyzeImageMessage)
+      setGlobalLoading({ isLoading: false, status: '', type: '' })
+      toast({
+        title: 'Analysis failed',
+        description: error.message || t.failedToAnalyzeImageMessage,
+        variant: 'destructive',
+      })
     }
+  }
+
+  // Helper: apply parsed fields to character data
+  const applyAnalysisFields = (data: Record<string, any>, sessionId: string) => {
+    if (sessionId !== activeSessionId) return
+    const updateData: Partial<TavernCardV2['data']> = {}
+    if (data.name) updateData.name = data.name
+    if (data.description) updateData.description = data.description
+    if (data.personality) updateData.personality = data.personality
+    if (data.scenario) updateData.scenario = data.scenario
+    if (data.first_mes) updateData.first_mes = data.first_mes
+    if (data.mes_example) updateData.mes_example = data.mes_example
+    if (data.tags && Array.isArray(data.tags)) updateData.tags = data.tags
+    if (data.character_book && typeof data.character_book === 'object') updateData.character_book = data.character_book
+    if (Object.keys(updateData).length > 0)
+      createNewVersion(updateData, interfaceLanguage === 'zh' ? '图像分析 V1' : 'Image Analysis V1')
   }
 
   const updateCharacterField = (field: string, value: any) => {
@@ -613,7 +724,13 @@ export default function CharacterCardGenerator() {
   const handleRegenerateAnalysis = async () => {
     if (!lastAnalyzedImage) return
 
-    if (confirm(interfaceLanguage === 'zh' ? '确定要重新分析此图片吗？当前输入的所有文字将被清空。' : 'Are you sure you want to re-analyze this image? All current text fields will be cleared.')) {
+    if (
+      confirm(
+        interfaceLanguage === 'zh'
+          ? '确定要重新分析此图片吗？当前输入的所有文字将被清空。'
+          : 'Are you sure you want to re-analyze this image? All current text fields will be cleared.'
+      )
+    ) {
       // Flush fields (preserve only metadata required for card structure)
       setCharacterData({
         spec: 'chara_card_v2',
@@ -636,7 +753,7 @@ export default function CharacterCardGenerator() {
           extensions: {},
         },
       })
-      
+
       // Clear messages and metadata
       setMessages([])
       setChatInput('')
@@ -846,16 +963,16 @@ export default function CharacterCardGenerator() {
         }, 'image/png')
       })
 
-      // 将PNG Blob转换为ArrayBuffer
+      // 将PNG Convert Blob to ArrayBuffer
       const pngArrayBuffer = await pngBlob.arrayBuffer()
 
-      // 将角色数据转换为JSON字符串
+      // Convert role data to JSON string
       const cardData = JSON.stringify(characterData)
 
-      // 使用Png.Generate生成带有角色卡数据的PNG
+      // 使用Png.Generate generates PNG with character card data
       const pngWithData = Png.Generate(pngArrayBuffer, cardData, { version: 'v2' })
 
-      // 创建下载链接
+      // Create download link
       const dataBlob = new Blob([pngWithData], { type: 'image/png' })
       const url = URL.createObjectURL(dataBlob)
       const link = document.createElement('a')
@@ -870,10 +987,10 @@ export default function CharacterCardGenerator() {
     }
   }
 
-  // 检查是否已上传图片（不是默认placeholder）或者已跳过图片上传
+  // Check whether the image has been uploaded (not the default placeholder) or the image upload has been skipped
   const hasUploadedImage = (characterImage && !characterImage.includes('placeholder.svg')) || hasSkippedImageUpload
 
-  // 打开事件书编辑器
+  // Open the event book editor
   const openEventBookEditor = () => {
     if (eventBook) {
       setEventBookJsonText(JSON.stringify(eventBook, null, 2))
@@ -1261,8 +1378,8 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
     } catch (error) {
       console.error('Fallback copy method failed:', error)
 
-      // 最后的降级方案：在控制台显示完整内容供复制
-      console.log('==================== 事件书提示词 / Event Book Prompt ====================')
+      //Final downgrade plan: display the full content in the console for copying
+      console.log0('==================== 事件书提示词 / Event Book Prompt ====================')
       console.log(prompt)
       console.log('==================================================================')
 
@@ -1274,8 +1391,8 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
     }
   }
 
-  // 生成事件书（带背景故事）
-  const generateEventBookWithBackground = async () => {
+    //Generate incident book (with backstory)
+    const generateEventBookWithBackground = async () => {
     if (!apiKey) {
       alert(t.pleaseSetApiKey)
       return
@@ -1290,7 +1407,7 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
       return
     }
 
-    // 验证事件数量
+    // Number of validation events
     const eventCount = Math.max(3, Math.min(99, eventBookCount))
     if (eventCount !== eventBookCount) {
       setEventBookCount(eventCount)
@@ -1321,7 +1438,7 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
         throw new Error('Response body is null')
       }
 
-      // 处理流式响应
+      // Handling Streaming Responses
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let fullContent = ''
@@ -1334,16 +1451,16 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
         fullContent += chunk
       }
 
-      // 尝试解析JSON
+      // Try parsing JSON
       try {
         const jsonString = extractJsonFromContent(fullContent)
         const eventBookData = JSON.parse(jsonString)
 
-        // 验证数据结构
+        // Validate Data Structure
         if (eventBookData.id && eventBookData.meta && eventBookData.events) {
           setEventBook(eventBookData)
-          setEventBookBackground('') // 清空背景故事输入
-          setEventBookCount(5) // 重置事件数量
+          setEventBookBackground('') // Empty backstory input
+          setEventBookCount(5) // Number of reset events
           alert(interfaceLanguage === 'zh' ? '事件书生成成功！' : 'Event book generated successfully!')
         } else {
           throw new Error('Invalid event book structure')
@@ -1397,18 +1514,18 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
     }
   }
 
-  // 处理图片上传页面的返回操作
+  // Handle the return operation of the image upload page
   const handleImageUploadGoBack = () => {
-    // 清空API Key，这样会回到欢迎页面
+//Clear the API Key, which will bring you back to the welcome page
     setApiKey('')
     localStorage.removeItem('character-generator-api-key')
     setShowWelcome(true)
-    setHasSkippedImageUpload(false) // 重置跳过状态
+    setHasSkippedImageUpload(false) // Reset skip status
   }
 
-  // 处理图片上传页面的跳过操作
+  // Handle the skip operation of the image upload page
   const handleImageUploadSkip = () => {
-    // 设置跳过标记，让用户可以进入完整界面
+    // Set a skip mark to allow users to enter the complete interface
     setHasSkippedImageUpload(true)
   }
 
@@ -1423,7 +1540,7 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
 
   return (
     <div className='h-screen bg-background flex flex-col'>
-      {/* Header - 只在桌面端显示 */}
+      {/* Header - Only shown on desktop */}
       <div className='hidden lg:block flex-shrink-0 p-4'>
         <div className='flex justify-between items-start mb-4'>
           <div className='flex items-center gap-3'>
@@ -1481,16 +1598,16 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
         </div>
       </div>
 
-      {/* 条件渲染：优先引导用户完成关键步骤 */}
+      {/* Conditional rendering: guide users to complete key steps first */}
       {showWelcome ? (
         <WelcomeScreen
           interfaceLanguage={interfaceLanguage}
           setInterfaceLanguage={(newLang: 'zh' | 'en') => {
-            // 当界面语言改变时，自动更新相关配置（如果当前是默认配置的话）
+            // When the interface language changes, automatically update related configurations (if it is currently the default configuration)
             const oldConfig = getLanguageSpecificConfig(interfaceLanguage)
             const newConfig = getLanguageSpecificConfig(newLang)
 
-            // 如果当前值是旧语言的默认值，则更新为新语言的默认值
+            // If the current value is the default value for the old language, update to the default value for the new language
             if (apiBaseUrl === oldConfig.API_BASE_URL) {
               setApiBaseUrl(newConfig.API_BASE_URL)
             }
@@ -1532,9 +1649,9 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
           onSkip={handleImageUploadSkip}
         />
       ) : (
-        // 第三步：完整界面 - 响应式布局
+        // Step 3: Complete interface - Responsive layout
         <div className='flex-1 min-h-0 overflow-hidden'>
-          {/* 桌面端：三列布局 */}
+          {/* Desktop: three-column layout */}
           <div className='hidden lg:grid lg:grid-cols-3 gap-4 px-4 pb-4 h-full'>
             {/* Column 1: Character Image */}
             <div className='flex flex-col min-h-0 max-h-full'>
@@ -1576,21 +1693,28 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
                 <CardHeader className='flex-shrink-0'>
                   <div className='flex justify-between items-center'>
                     <CardTitle>{t.characterAttributes}</CardTitle>
-                    <div className="flex gap-2">
-                       {/* Regenerate Button */}
+                    <div className='flex gap-2'>
+                      {/* Regenerate Button */}
                       {hasAnalysisRun && lastAnalyzedImage && (
-                        <Button 
-                          onClick={handleRegenerateAnalysis} 
-                          variant="outline" 
-                          size="sm"
-                          title={t.regenerate}
-                        >
-                          <Repeat className="w-4 h-4 mr-2" />
-                          {t.regenerate}
-                        </Button>
+                        <>
+                          <Button onClick={handleRegenerateAnalysis} variant='outline' size='sm' title={t.regenerate}>
+                            <Repeat className='w-4 h-4 mr-2' />
+                            {t.regenerate}
+                          </Button>
+                          {analysisTruncated && (
+                            <Button
+                              onClick={() => analyzeImage(lastAnalyzedImage!, analysisRawContent)}
+                              variant='outline'
+                              size='sm'
+                              className='animate-pulse border-amber-400 text-amber-400'
+                            >
+                              ⚡ Continue Generation
+                            </Button>
+                          )}
+                        </>
                       )}
-                      
-                      {/* 版本选择器 */}
+
+                      {/* version selector */}
                       <VersionHistoryDialog
                         interfaceLanguage={interfaceLanguage}
                         isOpen={isVersionSelectorOpen}
@@ -1791,7 +1915,7 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
                         </div>
                       </div>
 
-                      {/* 事件书段落 - 只在功能开关开启时显示 */}
+                      {/* event book paragraph - Only displayed when the function switch is turned on */}
                       {FEATURE_FLAGS.SHOW_EVENT_BOOK && (
                         <div className='border-t pt-4'>
                           <div className='mb-2'>
@@ -1827,7 +1951,7 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
                             </div>
                           )}
 
-                          {/* 事件书操作按钮 */}
+                          {/* Event book action button */}
                           <div className='flex gap-2 flex-wrap pt-3'>
                             <Button onClick={copyEventBookPrompt} size='sm' variant='outline' className='text-xs'>
                               {interfaceLanguage === 'zh' ? '复制提示词' : 'Copy Prompt'}
@@ -1900,9 +2024,9 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
             />
           </div>
 
-          {/* 移动端：Tab切换布局 */}
+          {/*Mobile: Tab toggle layout*/}
           <div className='lg:hidden flex flex-col h-full'>
-            {/* 移动端属性更新提示 */}
+            {/* Mobile property update tips */}
             {mobileAttributeUpdateNotification.show && (
               <div className='fixed top-4 left-4 right-4 z-50'>
                 <Alert className='bg-background border shadow-lg'>
@@ -1922,10 +2046,10 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
               </div>
             )}
 
-            {/* 移动端Tab导航 */}
+            {/* Mobile Tab Navigation */}
             <div className='flex-shrink-0 px-4 pb-2 pt-4'>
               <div className='flex items-center gap-2'>
-                {/* Tab选择器 */}
+                {/* Tab selector */}
                 <div className='flex bg-muted/30 rounded-lg p-1 flex-1'>
                   <button
                     onClick={() => setMobileActiveTab('image')}
@@ -1959,16 +2083,16 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
                   </button>
                 </div>
 
-                {/* 右侧按钮组 */}
+                {/* Right button group */}
                 <div className='flex gap-1'>
-                  {/* 导出按钮 - 只在有角色内容时显示 */}
+                  {/* export button - Only shown when there is character content */}
                   {hasUploadedImage && (
                     <Button onClick={openExportDialog} variant='outline' size='sm' className='px-2'>
                       <Download className='w-4 h-4' />
                     </Button>
                   )}
 
-                  {/* 更多按钮 */}
+                  {/* More button */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant='outline' size='sm' className='px-2'>
@@ -2024,7 +2148,7 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
               </div>
             </div>
 
-            {/* 移动端Tab内容 */}
+            {/* Mobile Tab content */}
             <div className='flex-1 px-4 pb-4 min-h-0 overflow-hidden'>
               {/* Character Image Tab */}
               {mobileActiveTab === 'image' && (
@@ -2066,20 +2190,27 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
                   <CardHeader className='flex-shrink-0'>
                     <div className='flex justify-between items-center'>
                       <CardTitle>{t.characterAttributes}</CardTitle>
-                      <div className="flex gap-2">
+                      <div className='flex gap-2'>
                         {/* Regenerate Button */}
                         {hasAnalysisRun && lastAnalyzedImage && (
-                          <Button 
-                            onClick={handleRegenerateAnalysis} 
-                            variant="outline" 
-                            size="sm"
-                            title={t.regenerate}
-                          >
-                            <Repeat className="w-4 h-4 mr-2" />
-                            {t.regenerate}
-                          </Button>
+                          <>
+                            <Button onClick={handleRegenerateAnalysis} variant='outline' size='sm' title={t.regenerate}>
+                              <Repeat className='w-4 h-4 mr-2' />
+                              {t.regenerate}
+                            </Button>
+                            {analysisTruncated && (
+                              <Button
+                                onClick={() => analyzeImage(lastAnalyzedImage!, analysisRawContent)}
+                                variant='outline'
+                                size='sm'
+                                className='animate-pulse border-amber-400 text-amber-400'
+                              >
+                                ⚡ Continue Generation
+                              </Button>
+                            )}
+                          </>
                         )}
-                        
+
                         <VersionHistoryDialog
                           interfaceLanguage={interfaceLanguage}
                           isOpen={isVersionSelectorOpen}
@@ -2283,7 +2414,7 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
                           </div>
                         </div>
 
-                        {/* 事件书段落 - 移动端版本 - 只在功能开关开启时显示 */}
+                        {/* event book paragraph - Mobile version - Only displayed when the function switch is turned on */}
                         {FEATURE_FLAGS.SHOW_EVENT_BOOK && (
                           <div className='border-t pt-4'>
                             <div className='mb-2'>
@@ -2319,7 +2450,7 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
                               </div>
                             )}
 
-                            {/* 事件书操作按钮 */}
+                            {/* Event book action button */}
                             <div className='grid grid-cols-2 gap-2 pt-3'>
                               <Button onClick={copyEventBookPrompt} size='sm' variant='outline' className='text-xs'>
                                 {interfaceLanguage === 'zh' ? '复制提示词' : 'Copy Prompt'}
@@ -2405,7 +2536,7 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
       {/* Global Loading Overlay */}
       <GlobalLoadingOverlay interfaceLanguage={interfaceLanguage} globalLoading={globalLoading} />
 
-      {/* 事件书编辑器全屏对话框 - 只在功能开关开启时显示 */}
+      {/* Event Book Editor full screen dialog -only displayed when the feature switch is on */}
       {FEATURE_FLAGS.SHOW_EVENT_BOOK && (
         <EventBookEditor
           interfaceLanguage={interfaceLanguage}
@@ -2417,7 +2548,7 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
         />
       )}
 
-      {/* 事件书生成对话框 - 只在功能开关开启时显示 */}
+      {/* Event book generation dialog box -only displayed when the function switch is turned on */}
       {FEATURE_FLAGS.SHOW_EVENT_BOOK && (
         <EventBookDialog
           interfaceLanguage={interfaceLanguage}
@@ -2432,7 +2563,7 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
         />
       )}
 
-      {/* 全局对话框 */}
+      {/* global dialog */}
       <ExportDialog
         interfaceLanguage={interfaceLanguage}
         isOpen={isExportDialogOpen}
