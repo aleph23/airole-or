@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import Link from 'next/link'
 import { ModelSelector } from '@/components/ui/model-selector'
+import { BackgroundGradient } from '@/components/ui/background-gradient'
 import {
   DEFAULT_CONFIGS,
   IMAGE_MODEL_OPTIONS,
@@ -69,6 +70,18 @@ export const SettingsDialog = ({
   const currentLanguageConfig = getLanguageSpecificConfig(interfaceLanguage)
   const currentModelOptions = getLanguageSpecificModelOptions(interfaceLanguage)
 
+  const fetchImageModelOptions = async () => {
+    const res = await fetch(`/api/openrouter-models?apiKey=${encodeURIComponent(apiKey)}&apiBaseUrl=${encodeURIComponent(apiBaseUrl)}&filter=vision`)
+    const data = await res.json()
+    return data.models as Array<{ value: string; label: string }>
+  }
+
+  const fetchChatModelOptions = async () => {
+    const res = await fetch(`/api/openrouter-models?apiKey=${encodeURIComponent(apiKey)}&apiBaseUrl=${encodeURIComponent(apiBaseUrl)}`)
+    const data = await res.json()
+    return data.models as Array<{ value: string; label: string }>
+  }
+
   // When the interface language changes, update the default configuration (if the current value is the default value)
   const handleInterfaceLanguageChange = (newLang: 'zh' | 'en') => {
     const oldConfig = getLanguageSpecificConfig(interfaceLanguage)
@@ -123,7 +136,8 @@ export const SettingsDialog = ({
         <DialogHeader>
           <DialogTitle>{t.settings}</DialogTitle>
         </DialogHeader>
-        <div className='space-y-4'>
+        <BackgroundGradient variant="icy" containerClassName="icy-glow-border w-full" className="p-1">
+          <div className='space-y-4 p-4 bg-background rounded-2xl'>
           <div>
             <Label htmlFor='interfacelang'>{t.interfaceLanguage}</Label>
             <Select value={interfaceLanguage} onValueChange={handleInterfaceLanguageChange}>
@@ -177,6 +191,7 @@ export const SettingsDialog = ({
               onChange={setImageModel}
               options={currentModelOptions.IMAGE_MODEL_OPTIONS}
               placeholder='Enter image model name...'
+              onRefresh={fetchImageModelOptions}
             />
           </div>
           <div>
@@ -186,6 +201,7 @@ export const SettingsDialog = ({
               onChange={setChatModel}
               options={currentModelOptions.CHAT_MODEL_OPTIONS}
               placeholder='Enter chat model name...'
+              onRefresh={fetchChatModelOptions}
             />
           </div>
           {FEATURE_FLAGS.SHOW_EVENT_BOOK && (
@@ -196,6 +212,7 @@ export const SettingsDialog = ({
                 onChange={setEventBookModel}
                 options={currentModelOptions.CHAT_MODEL_OPTIONS}
                 placeholder='Enter event book model name...'
+                onRefresh={fetchChatModelOptions}
               />
             </div>
           )}
@@ -268,6 +285,7 @@ export const SettingsDialog = ({
             </div>
           </div>
         </div>
+      </BackgroundGradient>
       </DialogContent>
     </Dialog>
   )

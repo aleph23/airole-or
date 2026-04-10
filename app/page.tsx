@@ -17,6 +17,8 @@ import {
   Download,
   RefreshCw,
   History,
+  Repeat,
+  GitBranch,
   MoreVertical,
   X,
   Check,
@@ -147,6 +149,10 @@ export default function CharacterCardGenerator() {
 
   // Session ID to track current character and avoid race conditions from stale AI responses
   const [activeSessionId, setActiveSessionId] = useState<string>('')
+
+  // Regenerate state
+  const [lastAnalyzedImage, setLastAnalyzedImage] = useState<string | null>(null)
+  const [hasAnalysisRun, setHasAnalysisRun] = useState(false)
 
   // Initialize ephemeral session ID on mount (not saved to localStorage)
   useEffect(() => {
@@ -411,7 +417,7 @@ export default function CharacterCardGenerator() {
     return characterVersions.find((v) => v.id === currentVersionId)
   }
 
-  // 显示属性更新提示
+  // Show property update prompt
   const showAttributeUpdateNotification = (type: 'image-analysis' | 'ai-generation') => {
     const message =
       type === 'image-analysis'
@@ -427,7 +433,7 @@ export default function CharacterCardGenerator() {
       // lg断点
       setMobileAttributeUpdateNotification({ show: true, message, type })
     } else {
-      // 桌面端显示自动消失的toast（底部显示）
+      // The desktop displays a toast that disappears automatically (displayed at the bottom)
       toast({
         title: interfaceLanguage === 'zh' ? '属性已更新' : 'Attributes Updated',
         description: message,
@@ -472,7 +478,7 @@ export default function CharacterCardGenerator() {
         jsonData.character_book
 
       if (hasValidUpdate) {
-        // 创建新版本而不是直接更新
+        // Create a new version instead of updating directly
         const updateData: Partial<TavernCardV2['data']> = {}
         if (jsonData.name) updateData.name = jsonData.name
         if (jsonData.description) updateData.description = jsonData.description
@@ -482,7 +488,7 @@ export default function CharacterCardGenerator() {
         if (jsonData.mes_example) updateData.mes_example = jsonData.mes_example
         if (jsonData.tags && Array.isArray(jsonData.tags)) updateData.tags = jsonData.tags
 
-        // 处理角色书数据
+        // Processing character book data
         if (jsonData.character_book && typeof jsonData.character_book === 'object') {
           updateData.character_book = jsonData.character_book
         }
@@ -554,7 +560,7 @@ export default function CharacterCardGenerator() {
         throw new Error(analysis.error)
       }
 
-      // 创建第一个版本（图像分析版本）
+      // Create the first version (image analysis version)
       const updateData: Partial<TavernCardV2['data']> = {}
       if (analysis.name) updateData.name = analysis.name
       if (analysis.description) updateData.description = analysis.description
@@ -575,6 +581,10 @@ export default function CharacterCardGenerator() {
       }
 
       setGlobalLoading((prev) => ({ ...prev, status: t.characterGeneratedSuccessfully }))
+
+      // Update state for regeneration
+      setLastAnalyzedImage(imageDataUrl)
+      setHasAnalysisRun(true)
 
       // 显示属性更新提示
       setTimeout(() => {
@@ -597,6 +607,54 @@ export default function CharacterCardGenerator() {
   // 更新角色书
   const updateCharacterBook = (book?: CharacterBook) => {
     setCharacterData((prev) => ({ ...prev, data: { ...prev.data, character_book: book } }))
+  }
+
+  // Regenerate analysis (Flush and resubmit)
+  const handleRegenerateAnalysis = async () => {
+    if (!lastAnalyzedImage) return
+
+    if (confirm(interfaceLanguage === 'zh' ? '确定要重新分析此图片吗？当前输入的所有文字将被清空。' : 'Are you sure you want to re-analyze this image? All current text fields will be cleared.')) {
+      // Flush fields (preserve only metadata required for card structure)
+      setCharacterData({
+        spec: 'chara_card_v2',
+        spec_version: '2.0',
+        data: {
+          name: '',
+          description: '',
+          personality: '',
+          scenario: '',
+          first_mes: '',
+          mes_example: '',
+          creator_notes: '',
+          system_prompt: '',
+          post_history_instructions: '',
+          alternate_greetings: [],
+          character_book: undefined,
+          tags: [],
+          creator: characterData.data.creator || '',
+          character_version: '1.0',
+          extensions: {},
+        },
+      })
+      
+      // Clear messages and metadata
+      setMessages([])
+      setChatInput('')
+      setCharacterVersions([])
+      setCurrentVersionId('')
+      setEventBook(null)
+      setStreamingContent('')
+
+      // Clear related localStorage
+      localStorage.removeItem('character-generator-character-data')
+      localStorage.removeItem('character-generator-chat-messages')
+      localStorage.removeItem('character-generator-versions')
+      localStorage.removeItem('character-generator-current-version-id')
+      localStorage.removeItem('character-generator-event-book')
+
+      // Trigger analysis again
+      await analyzeImage(lastAnalyzedImage)
+    }
   }
 
   const addAlternateGreeting = () => {
@@ -654,7 +712,7 @@ export default function CharacterCardGenerator() {
       const prompts = getLanguagePrompts(language, customLanguage)
       const systemPrompt = prompts.chatSystem.replace('{characterData}', JSON.stringify(characterData.data, null, 2))
 
-      // 开始流式请求
+      // Start streaming request
       const response = await fetch('/api/chat-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -678,7 +736,7 @@ export default function CharacterCardGenerator() {
         throw new Error('Response body is null')
       }
 
-      // 处理流式响应
+      // Handling streaming responses
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let fullContent = ''
@@ -692,7 +750,7 @@ export default function CharacterCardGenerator() {
         setStreamingContent(fullContent)
       }
 
-      // 流式输出完成，添加到消息列表
+      // Streaming output completed, added to message list
       const assistantMessage: ChatMessage = {
         id: Date.now().toString(),
         role: 'assistant',
@@ -746,7 +804,7 @@ export default function CharacterCardGenerator() {
 
       // 创建一个Image对象来加载原始图片
       const img = new window.Image()
-      img.crossOrigin = 'anonymous' // 处理跨域问题
+      img.crossOrigin = 'anonymous' // Handle cross-domain issues
 
       const imageLoadPromise = new Promise<HTMLCanvasElement>((resolve, reject) => {
         img.onload = () => {
@@ -1518,17 +1576,32 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
                 <CardHeader className='flex-shrink-0'>
                   <div className='flex justify-between items-center'>
                     <CardTitle>{t.characterAttributes}</CardTitle>
-                    {/* 版本选择器 */}
-                    <VersionHistoryDialog
-                      interfaceLanguage={interfaceLanguage}
-                      isOpen={isVersionSelectorOpen}
-                      onOpenChange={setIsVersionSelectorOpen}
-                      characterVersions={characterVersions}
-                      currentVersionId={currentVersionId}
-                      getCurrentVersion={getCurrentVersion}
-                      onSaveAsNewVersion={saveAsNewVersion}
-                      onSwitchToVersion={switchToVersion}
-                    />
+                    <div className="flex gap-2">
+                       {/* Regenerate Button */}
+                      {hasAnalysisRun && lastAnalyzedImage && (
+                        <Button 
+                          onClick={handleRegenerateAnalysis} 
+                          variant="outline" 
+                          size="sm"
+                          title={t.regenerate}
+                        >
+                          <Repeat className="w-4 h-4 mr-2" />
+                          {t.regenerate}
+                        </Button>
+                      )}
+                      
+                      {/* 版本选择器 */}
+                      <VersionHistoryDialog
+                        interfaceLanguage={interfaceLanguage}
+                        isOpen={isVersionSelectorOpen}
+                        onOpenChange={setIsVersionSelectorOpen}
+                        characterVersions={characterVersions}
+                        currentVersionId={currentVersionId}
+                        getCurrentVersion={getCurrentVersion}
+                        onSaveAsNewVersion={saveAsNewVersion}
+                        onSwitchToVersion={switchToVersion}
+                      />
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className='flex-1 overflow-y-auto min-h-0'>
@@ -1993,16 +2066,31 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
                   <CardHeader className='flex-shrink-0'>
                     <div className='flex justify-between items-center'>
                       <CardTitle>{t.characterAttributes}</CardTitle>
-                      <VersionHistoryDialog
-                        interfaceLanguage={interfaceLanguage}
-                        isOpen={isVersionSelectorOpen}
-                        onOpenChange={setIsVersionSelectorOpen}
-                        characterVersions={characterVersions}
-                        currentVersionId={currentVersionId}
-                        getCurrentVersion={getCurrentVersion}
-                        onSaveAsNewVersion={saveAsNewVersion}
-                        onSwitchToVersion={switchToVersion}
-                      />
+                      <div className="flex gap-2">
+                        {/* Regenerate Button */}
+                        {hasAnalysisRun && lastAnalyzedImage && (
+                          <Button 
+                            onClick={handleRegenerateAnalysis} 
+                            variant="outline" 
+                            size="sm"
+                            title={t.regenerate}
+                          >
+                            <Repeat className="w-4 h-4 mr-2" />
+                            {t.regenerate}
+                          </Button>
+                        )}
+                        
+                        <VersionHistoryDialog
+                          interfaceLanguage={interfaceLanguage}
+                          isOpen={isVersionSelectorOpen}
+                          onOpenChange={setIsVersionSelectorOpen}
+                          characterVersions={characterVersions}
+                          currentVersionId={currentVersionId}
+                          getCurrentVersion={getCurrentVersion}
+                          onSaveAsNewVersion={saveAsNewVersion}
+                          onSwitchToVersion={switchToVersion}
+                        />
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className='flex-1 overflow-y-auto'>

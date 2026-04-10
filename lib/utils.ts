@@ -9,7 +9,7 @@ export function cn(...inputs: ClassValue[]) {
 
 // 提取JSON内容的函数
 export const extractJsonFromContent = (content: string): string => {
-  // 移除前后空白
+  // Remove leading and trailing whitespace
   content = content.trim()
 
   // 1. Try to match all ```json ... ``` blocks, taking the last one
@@ -62,7 +62,7 @@ export const exportAsPng = async (characterData: TavernCardV2, characterImage: s
 
     // 创建一个Image对象来加载原始图片
     const img = new Image()
-    img.crossOrigin = 'anonymous' // 处理跨域问题
+    img.crossOrigin = 'anonymous' // Handle cross-domain issues
 
     const imageLoadPromise = new Promise<HTMLCanvasElement>((resolve, reject) => {
       img.onload = () => {

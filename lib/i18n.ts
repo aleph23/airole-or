@@ -86,7 +86,7 @@ export const UI_TEXTS = {
     saveAsNewVersion: "保存为新版本",
     enterVersionName: "输入版本名称（可选）：",
     freeApiKey: "免费申请Key",
-    regenerate: "重新生成",
+    regenerate: "重新分析",
     eventBookBackground: "背景故事概要",
     eventBookBackgroundDesc: "可选：输入简单的背景故事概要，用于生成更贴合的事件书",
     eventBookBackgroundPlaceholder: "例如：角色是一名年轻的冒险家，在寻找传说中的宝藏...",

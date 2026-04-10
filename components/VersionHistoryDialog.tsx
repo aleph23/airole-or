@@ -3,7 +3,7 @@
 import React from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { History, Plus } from "lucide-react"
+import { GitBranch, Plus } from "lucide-react"
 import { UI_TEXTS } from "@/lib/i18n"
 import type { CharacterVersion } from "@/lib/types"
 
@@ -47,8 +47,8 @@ export function VersionHistoryDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <History className="w-4 h-4 mr-2" />
+        <Button variant="outline" size="sm" className="whitespace-nowrap">
+          <GitBranch className="w-4 h-4 mr-2" />
           {getCurrentVersion()?.label || `V${getCurrentVersion()?.version || 1}`}
         </Button>
       </DialogTrigger>

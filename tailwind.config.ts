@@ -83,11 +83,20 @@ const config: Config = {
   				to: {
   					height: '0'
   				}
+  			},
+  			'icy-glow': {
+  				'0%, 100%': {
+  					boxShadow: '0 0 20px 3px rgba(70, 225, 255, 0.4), 0 0 60px 12px rgba(80, 225, 255, 0.2)'
+  				},
+  				'50%': {
+  					boxShadow: '0 0 36px 8px rgba(120, 225, 255, 0.6), 0 0 80px 24px rgba(160, 225, 255, 0.4)'
+  				}
   			}
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
+  			'accordion-up': 'accordion-up 0.2s ease-out',
+  			'icy-glow': 'icy-glow 8s ease-in-out infinite'
   		}
   	}
   },

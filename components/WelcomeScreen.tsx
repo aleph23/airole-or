@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ModelSelector } from '@/components/ui/model-selector'
 import { VideoDialog } from '@/components/VideoDialog'
+import { BackgroundGradient } from '@/components/ui/background-gradient'
 import { Play } from 'lucide-react'
 import {
   DEFAULT_CONFIGS,
@@ -68,6 +69,18 @@ export function WelcomeScreen({
   const [isVideoDialogOpen, setIsVideoDialogOpen] = useState(false)
   const videoUrl = 'https://res.airole.net/airole.net-demo-short.zip.mp4'
 
+  const fetchImageModelOptions = async () => {
+    const res = await fetch(`/api/openrouter-models?apiKey=${encodeURIComponent(apiKey)}&apiBaseUrl=${encodeURIComponent(apiBaseUrl)}&filter=vision`)
+    const data = await res.json()
+    return data.models as Array<{ value: string; label: string }>
+  }
+
+  const fetchChatModelOptions = async () => {
+    const res = await fetch(`/api/openrouter-models?apiKey=${encodeURIComponent(apiKey)}&apiBaseUrl=${encodeURIComponent(apiBaseUrl)}`)
+    const data = await res.json()
+    return data.models as Array<{ value: string; label: string }>
+  }
+
   const handleContinue = () => {
     // 保存设置到localStorage
     localStorage.setItem('character-generator-api-key', apiKey)
@@ -122,11 +135,12 @@ export function WelcomeScreen({
   }
 
   return (
-    <div className='flex-1 flex items-center justify-center px-4 pb-4'>
-      <Card className='w-full max-w-lg'>
-        <CardHeader>
-          <CardTitle className='text-center'>{t.welcome}</CardTitle>
-        </CardHeader>
+    <div className='flex-1 flex items-center justify-center px-4 pb-4 overflow-y-auto'>
+      <BackgroundGradient variant="icy" containerClassName="icy-glow-border max-w-lg w-full">
+        <Card className='w-full'>
+          <CardHeader>
+            <CardTitle className='text-center'>{t.welcome}</CardTitle>
+          </CardHeader>
         <CardContent className='space-y-4'>
           {/* Demo video button */}
           <div className='text-center mb-6'>
@@ -194,6 +208,7 @@ export function WelcomeScreen({
               onChange={setImageModel}
               options={currentModelOptions.IMAGE_MODEL_OPTIONS}
               placeholder='Enter image model name...'
+              onRefresh={fetchImageModelOptions}
             />
           </div>
           <div>
@@ -203,6 +218,7 @@ export function WelcomeScreen({
               onChange={setChatModel}
               options={currentModelOptions.CHAT_MODEL_OPTIONS}
               placeholder='Enter chat model name...'
+              onRefresh={fetchChatModelOptions}
             />
           </div>
           {FEATURE_FLAGS.SHOW_EVENT_BOOK && (
@@ -213,6 +229,7 @@ export function WelcomeScreen({
                 onChange={setEventBookModel}
                 options={currentModelOptions.CHAT_MODEL_OPTIONS}
                 placeholder='Enter event book model name...'
+                onRefresh={fetchChatModelOptions}
               />
             </div>
           )}
@@ -251,6 +268,7 @@ export function WelcomeScreen({
           </Button>
         </CardContent>
       </Card>
+      </BackgroundGradient>
 
       {/* 视频对话框 */}
       <VideoDialog

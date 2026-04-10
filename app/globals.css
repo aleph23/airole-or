@@ -18,47 +18,47 @@ body {
   * {
     scrollbar-width: thin;
   }
-  
+
   /* 亮色模式的滚动条 */
   :root {
     --scrollbar-track: hsl(0 0% 96.1%);
     --scrollbar-thumb: hsl(0 0% 80%);
     --scrollbar-thumb-hover: hsl(0 0% 70%);
   }
-  
+
   /* 深色模式的滚动条 */
   .dark {
     --scrollbar-track: hsl(0 0% 14.9%);
     --scrollbar-thumb: hsl(0 0% 30%);
     --scrollbar-thumb-hover: hsl(0 0% 40%);
   }
-  
+
   /* 应用滚动条颜色 */
   * {
     scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
   }
-  
+
   /* Webkit 浏览器的滚动条样式 */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
-  
+
   ::-webkit-scrollbar-track {
     background: var(--scrollbar-track);
     border-radius: 3px;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     background: var(--scrollbar-thumb);
     border-radius: 3px;
     transition: background-color 0.2s ease;
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb-hover);
   }
-  
+
   ::-webkit-scrollbar-corner {
     background: var(--scrollbar-track);
   }
@@ -143,4 +143,28 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+@keyframes icy-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 20px 3px rgba(70, 225, 255, 0.4),
+      0 0 60px 12px rgba(80, 225, 255, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 36px 8px rgba(120, 225, 255, 0.6),
+      0 0 80px 24px rgba(160, 225, 255, 0.4);
+  }
+}
+
+.icy-glow-border {
+  animation: icy-glow 8s ease-in-out infinite;
+  border-width: 1px;
 }
