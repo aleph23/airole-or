@@ -1,21 +1,27 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, apiKey, apiBaseUrl = "https://api.openai.com/v1" } = await req.json()
+    const { messages, apiKey, apiBaseUrl = 'https://openrouter.ai/api/v1', model } = await req.json()
 
-    if (!apiKey) {
-      return NextResponse.json({ error: "API key is required" }, { status: 400 })
+    const finalApiKey = apiKey || process.env.OPENROUTER_API_KEY
+    // Remove trailing slash if present
+    const normalizedBaseUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl
+
+    if (!finalApiKey) {
+      return NextResponse.json({ error: 'API key is required' }, { status: 400 })
     }
 
-    const response = await fetch(`${apiBaseUrl}/chat/completions`, {
-      method: "POST",
+    const response = await fetch(`${normalizedBaseUrl}/chat/completions`, {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${finalApiKey}`,
+        'HTTP-Referer': 'https://github.com/aleph23/airole-or',
+        'X-Title': 'AiRole-OR',
       },
       body: JSON.stringify({
-        model: "gpt-4",
+        model: model || 'xiaomi/mimo-v2-omni',
         messages: messages,
         max_tokens: 1000,
         temperature: 0.7,
@@ -24,19 +30,19 @@ export async function POST(req: NextRequest) {
     })
 
     if (!response.ok) {
-      const error = await response.json()
+      const errorData = await response.json().catch(() => ({}))
       return NextResponse.json(
-        { error: error.error?.message || "Failed to get AI response" },
-        { status: response.status },
+        { error: errorData.error?.message || `API error: ${response.statusText}` },
+        { status: response.status }
       )
     }
 
     const data = await response.json()
-    const content = data.choices[0]?.message?.content || "No response generated"
+    const content = data.choices?.[0]?.message?.content || 'No response generated'
 
     return NextResponse.json({ content })
-  } catch (error) {
-    console.error("API Error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  } catch (error: any) {
+    console.error('API Error:', error)
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }

@@ -12,53 +12,53 @@ body {
   }
 }
 
-/* 统一的滚动条样式 */
+/* Unified scroll bar style */
 @layer base {
-  /* 为所有滚动条设置统一的细样式 */
+  /* Set a uniform thin style for all scroll bars */
   * {
     scrollbar-width: thin;
   }
-  
-  /* 亮色模式的滚动条 */
+
+  /* Light mode scroll bar */
   :root {
     --scrollbar-track: hsl(0 0% 96.1%);
     --scrollbar-thumb: hsl(0 0% 80%);
     --scrollbar-thumb-hover: hsl(0 0% 70%);
   }
-  
-  /* 深色模式的滚动条 */
+
+  /* Dark mode scrollbars */
   .dark {
     --scrollbar-track: hsl(0 0% 14.9%);
     --scrollbar-thumb: hsl(0 0% 30%);
     --scrollbar-thumb-hover: hsl(0 0% 40%);
   }
-  
-  /* 应用滚动条颜色 */
+
+  /* Apply scrollbar color */
   * {
     scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
   }
-  
-  /* Webkit 浏览器的滚动条样式 */
+
+  /* Webkit Browser scroll bar style */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
-  
+
   ::-webkit-scrollbar-track {
     background: var(--scrollbar-track);
     border-radius: 3px;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     background: var(--scrollbar-thumb);
     border-radius: 3px;
     transition: background-color 0.2s ease;
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb-hover);
   }
-  
+
   ::-webkit-scrollbar-corner {
     background: var(--scrollbar-track);
   }

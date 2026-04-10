@@ -165,6 +165,26 @@ export function GoogleDriveManager({
     }
   }, [characterData.data.name])
 
+  // Handle background refresh errors
+  useEffect(() => {
+    if (session?.error === 'RefreshAccessTokenError') {
+      toast({
+        title: t.authExpired,
+        description: t.reauthorizeNeeded,
+        variant: 'destructive',
+        action: (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => signIn('google')}
+          >
+            {t.reauthorize}
+          </Button>
+        ),
+      })
+    }
+  }, [session, t, toast])
+
   // 加载文件列表
   const loadFiles = async () => {
     if (!session?.accessToken) return

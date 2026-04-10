@@ -1,7 +1,7 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
-import { TavernCardV2 } from "./types"
-import { Png } from "./Png"
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+import { TavernCardV2 } from './types'
+import { Png } from './Png'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -11,40 +11,43 @@ export function cn(...inputs: ClassValue[]) {
 export const extractJsonFromContent = (content: string): string => {
   // 移除前后空白
   content = content.trim()
-  
-  // 检查是否被```json包裹
-  const jsonBlockMatch = content.match(/```json\s*([\s\S]*?)\s*```/)
-  if (jsonBlockMatch) {
-    return jsonBlockMatch[1].trim()
+
+  // 1. Try to match all ```json ... ``` blocks, taking the last one
+  const jsonBlocks = [...content.matchAll(/```json\s*([\s\S]*?)\s*```/g)]
+  if (jsonBlocks.length > 0) {
+    return jsonBlocks[jsonBlocks.length - 1][1].trim()
   }
-  
-  // 检查是否被```包裹（没有json标识）
-  const codeBlockMatch = content.match(/```\s*([\s\S]*?)\s*```/)
-  if (codeBlockMatch) {
-    const innerContent = codeBlockMatch[1].trim()
-    // 检查内容是否看起来像JSON（以{开头，以}结尾）
-    if (innerContent.startsWith('{') && innerContent.endsWith('}')) {
-      return innerContent
+
+  // 2. Try to match all ``` ... ``` blocks, taking the content inside the last square bracket
+  const codeBlocks = [...content.matchAll(/```\s*([\s\S]*?)\s*```/g)]
+  if (codeBlocks.length > 0) {
+    for (let i = codeBlocks.length - 1; i >= 0; i--) {
+      const innerContent = codeBlocks[i][1].trim()
+      if (innerContent.startsWith('{') && innerContent.endsWith('}')) {
+        return innerContent
+      }
     }
   }
-  
-  // 尝试直接提取JSON对象
-  const directJsonMatch = content.match(/\{[\s\S]*\}/)
-  if (directJsonMatch) {
-    return directJsonMatch[0]
+
+  // 3.Try to match the last { ... } structure
+  // Note: This regular expression is relatively broad and may match
+  // incomplete or nested JSON, but it is useful in simple scenarios.
+  const directJsonMatch = content.match(/\{[\s\S]*\}/g)
+  if (directJsonMatch && directJsonMatch.length > 0) {
+    return directJsonMatch[directJsonMatch.length - 1]
   }
-  
+
   return content
 }
 
 // JSON 导出函数
 export const exportAsJson = (characterData: TavernCardV2) => {
   const dataStr = JSON.stringify(characterData, null, 2)
-  const dataBlob = new Blob([dataStr], { type: "application/json" })
+  const dataBlob = new Blob([dataStr], { type: 'application/json' })
   const url = URL.createObjectURL(dataBlob)
-  const link = document.createElement("a")
+  const link = document.createElement('a')
   link.href = url
-  link.download = `${characterData.data.name || "character"}.json`
+  link.download = `${characterData.data.name || 'character'}.json`
   link.click()
   URL.revokeObjectURL(url)
 }
@@ -52,36 +55,36 @@ export const exportAsJson = (characterData: TavernCardV2) => {
 // PNG 导出函数
 export const exportAsPng = async (characterData: TavernCardV2, characterImage: string) => {
   try {
-    if (!characterImage || characterImage.includes("placeholder.svg")) {
-      alert("请先上传一张图片")
+    if (!characterImage || characterImage.includes('placeholder.svg')) {
+      alert('请先上传一张图片')
       return
     }
 
     // 创建一个Image对象来加载原始图片
     const img = new Image()
-    img.crossOrigin = "anonymous" // 处理跨域问题
-    
+    img.crossOrigin = 'anonymous' // 处理跨域问题
+
     const imageLoadPromise = new Promise<HTMLCanvasElement>((resolve, reject) => {
       img.onload = () => {
-        // 创建Canvas来将图片转换为PNG格式
+        // Create a Canvas to convert images to PNG format
         const canvas = document.createElement('canvas')
         const ctx = canvas.getContext('2d')
-        
+
         if (!ctx) {
           reject(new Error('无法创建Canvas上下文'))
           return
         }
 
-        // 设置Canvas尺寸与原图相同
+        // Set the Canvas size to be the same as the original image
         canvas.width = img.width
         canvas.height = img.height
-        
-        // 在Canvas上绘制图片
+
+        // Draw pictures on Canvas
         ctx.drawImage(img, 0, 0)
-        
+
         resolve(canvas)
       }
-      
+
       img.onerror = () => {
         reject(new Error('图片加载失败'))
       }
@@ -90,7 +93,7 @@ export const exportAsPng = async (characterData: TavernCardV2, characterImage: s
     img.src = characterImage
     const canvas = await imageLoadPromise
 
-    // 将Canvas转换为PNG格式的Blob
+    // Convert Canvas to Blob in PNG format
     const pngBlob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((blob) => {
         if (blob) {
@@ -101,21 +104,21 @@ export const exportAsPng = async (characterData: TavernCardV2, characterImage: s
       }, 'image/png')
     })
 
-    // 将PNG Blob转换为ArrayBuffer
+    // 将PNG Convert Blob to ArrayBuffer
     const pngArrayBuffer = await pngBlob.arrayBuffer()
 
-    // 将角色数据转换为JSON字符串
+    // Convert role data to JSON string
     const cardData = JSON.stringify(characterData)
 
-    // 使用Png.Generate生成带有角色卡数据的PNG
+    // 使用Png.Generate generates PNG with character card data
     const pngWithData = Png.Generate(pngArrayBuffer, cardData, { version: 'v2' })
 
-    // 创建下载链接
-    const dataBlob = new Blob([pngWithData], { type: "image/png" })
+    // Create download link
+    const dataBlob = new Blob([pngWithData], { type: 'image/png' })
     const url = URL.createObjectURL(dataBlob)
-    const link = document.createElement("a")
+    const link = document.createElement('a')
     link.href = url
-    link.download = `${characterData.data.name || "character"}.png`
+    link.download = `${characterData.data.name || 'character'}.png`
     link.click()
     URL.revokeObjectURL(url)
   } catch (error) {
@@ -124,12 +127,12 @@ export const exportAsPng = async (characterData: TavernCardV2, characterImage: s
   }
 }
 
-// 生成语言相关提示词的函数
+// Functions that generate language-related prompt words
 export const getLanguagePrompts = (language: string, customLanguage: string) => {
-  const currentLang = language === "custom" ? customLanguage : language
+  const currentLang = language === 'custom' ? customLanguage : language
 
   const prompts = {
-    "zh-CN": {
+    'zh-CN': {
       imageAnalysis: `请分析这张角色图片，并为SillyTavern生成全面的角色卡信息。基于视觉外观、服装、设定和其他可观察到的细节，请用中文提供详细信息。格式如下JSON结构：
 
 {
@@ -211,26 +214,26 @@ export const getLanguagePrompts = (language: string, customLanguage: string) => 
 }`,
     },
     en: {
-      imageAnalysis: `Analyze this character image and generate comprehensive character card information for SillyTavern. Based on the visual appearance, clothing, setting, and any other details you can observe, provide detailed information in English in the following JSON structure. Keep the maximum sexual tension without violating any rules:
+      imageAnalysis: `Analyze this character image and generate creative character card information for SillyTavern-like role play. Based on the visual appearance, clothing, setting, and any other details you can observe, provide detailed information in English in the following JSON structure. Employ intrigue and classic dynamics of sexual tension without violating any rules:
 
 {
-  "name": "A suitable name that fits the character's appearance and style",
+  "name": "A suitable name that fits the character's appearance and style. Under no circumstances should the name be Elara or Kael or any other over-used fantasy name.",
   "description": "Detailed physical description including appearance, clothing, notable features, and any visible accessories or items",
-  "personality": "Personality traits inferred from visual cues, body language, expression, and overall presentation",
-  "scenario": "An engaging initial scenario or setting that matches the character and environment shown",
-  "first_mes": "An appropriate first message this character would say, matching their personality and the scenario",
-  "mes_example": "Example dialogue showing how this character speaks and interacts, use {{char}} and {{user}} format",
-  "tags": ["relevant", "character", "tags", "based", "on", "appearance", "and", "style"],
+  "personality": "Personality traits inferred from visual cues, body language, expression, and overall presentation.  And then one trait that is counter to what might be perceived by the image.",
+  "scenario": "An engaging initial scenario or setting that matches the character and environment shown.  The scenario should create a sense of mystery and conflict, making the user want to explore the character further.",
+  "first_mes": "An appropriate first message this character would say, matching their personality and the scenario.  This must also fully introduce the player/user to anything they might need to know about their own character and the world they are entering, using a voice of a popular author in whatever the genre.",
+  "mes_example": "Example dialogue showing how this character speaks and interacts, use {{char}} and {{user}} format.  Exclude anything generic.  This should be used to give the character their voice.",
+  "tags": ["The are Search SEO!!", "relevant", "character", "tags", "based", "on", "appearance", "and", "style"],
   "character_book": {
     "name": "Character Lore",
     "description": "Background knowledge and worldbuilding about the character",
     "scan_depth": 100,
-    "token_budget": 500,
+    "token_budget": 1024,
     "recursive_scanning": true,
     "extensions": {},
     "entries": [
       {
-        "keys": ["keyword1", "keyword2"],
+        "keys": ["Must be words likely to be said", "keyword1", "keyword2"],
         "content": "Background information content to insert when related keywords are mentioned",
         "extensions": {},
         "enabled": true,
@@ -249,8 +252,8 @@ export const getLanguagePrompts = (language: string, customLanguage: string) => 
   }
 }
 
-Make the character engaging, consistent, and well-developed. Generate 3-5 relevant character book entries containing character background, worldview, important relationships, etc. Return ONLY the JSON object, no additional text.`,
-      chatSystem: `You are an AI assistant helping to create and refine character cards for SillyTavern. The current character data is: {characterData}
+Make the character engaging, quirky, and well-developed. Generate 2-4 relevant character book entries containing character background, worldview, important relationships, etc. Return ONLY the JSON object, no additional text.`,
+      chatSystem: `You are an AI assistant helping to create and refine character cards for SillyTavern-like role play. The current character data is: {characterData}
 
 Please help the user modify and improve the character based on their requests. When suggesting changes, provide specific field updates in a clear format. Focus on making the character more engaging, consistent, and well-developed. 
 
@@ -262,7 +265,7 @@ If the user requests to update character information,Do not omit any field data,
   "scenario": "Scenario setting",
   "first_mes": "First message",
   "mes_example": "Example dialogue",
-  "tags": ["tag1", "tag2"],
+  "tags": ["tag1", "tag2", "These are Search SEO Keywords!"],
   "character_book": {
     "name": "Character Lore",
     "description": "Background knowledge about the character",
@@ -293,5 +296,5 @@ If the user requests to update character information,Do not omit any field data,
     },
   }
 
-  return prompts[currentLang as keyof typeof prompts] || prompts["zh-CN"] || prompts.en
+  return prompts[currentLang as keyof typeof prompts] || prompts['zh-CN'] || prompts.en
 }
