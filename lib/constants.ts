@@ -8,7 +8,7 @@ export const DEFAULT_CONFIGS = {
 
 // Function switch
 export const FEATURE_FLAGS = {
-  SHOW_EVENT_BOOK: false, // Control whether to display event book related UI
+  SHOW_EVENT_BOOK: true, // Control whether to display event book related UI
 }
 
 // Default configuration based on interface language
@@ -62,6 +62,7 @@ export const LANGUAGE_SPECIFIC_MODEL_OPTIONS = {
       { value: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
       { value: 'qwen/qwen3.5-122b-a10b', label: 'Qwen 3.5 122B A10B' },
       { value: 'moonshotai/kimi-k2.5', label: 'Kimi K2.5' },
+      { value: 'z-ai/glm-4.6v', label: 'GLM 4.6V' },
       { value: 'mistralai/mistral-large-2512', label: 'Mistral Large 2512' },
     ],
     CHAT_MODEL_OPTIONS: [
@@ -76,6 +77,7 @@ export const LANGUAGE_SPECIFIC_MODEL_OPTIONS = {
       { value: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
       { value: 'qwen/qwen3.5-122b-a10b', label: 'Qwen 3.5 122B A10B' },
       { value: 'moonshotai/kimi-k2.5', label: 'Kimi K2.5' },
+      { value: 'z-ai/glm-4.6v', label: 'GLM 4.6V' },
       { value: 'mistralai/mistral-large-2512', label: 'Mistral Large 2512' },
     ],
     CHAT_MODEL_OPTIONS: [

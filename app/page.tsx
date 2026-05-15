@@ -31,17 +31,24 @@ import { ModelSelector } from '@/components/ui/model-selector'
 import {
   DEFAULT_CONFIGS,
   ADJUSTMENT_PRESETS,
-  IMAGE_MODEL_OPTIONS,
-  CHAT_MODEL_OPTIONS,
-  LANGUAGE_OPTIONS,
   INTERFACE_LANGUAGE_OPTIONS,
   getLanguageSpecificConfig,
   getLanguageSpecificModelOptions,
   FEATURE_FLAGS,
 } from '@/lib/constants'
-import type { TavernCardV2, EventBook, ChatMessage, CharacterVersion, CharacterBook } from '@/lib/types'
+import {
+  TavernCardV2,
+  ChatMessage,
+  CharacterVersion,
+  FeatureContext,
+} from '@/types/types'
 import { detectSystemLanguage, UI_TEXTS } from '@/lib/i18n'
-import { extractJsonFromContent, exportAsJson, exportAsPng, getLanguagePrompts } from '@/lib/utils'
+import {
+  extractJsonFromContent,
+  getLanguagePrompts,
+  exportAsJson as utilsExportAsJson,
+  exportAsPng as utilsExportAsPng,
+} from '@/lib/utils'
 import { resilientParse } from '@/lib/json-repair'
 import { SettingsDialog } from '@/components/SettingsDialog'
 import { WelcomeScreen } from '@/components/WelcomeScreen'
@@ -225,7 +232,7 @@ export default function CharacterCardGenerator() {
 
     if (savedApiKey) {
       setApiKey(savedApiKey)
-      setShowWelcome(false) //If there is a saved API Key, the welcome interface will not be displayed.
+      setShowWelcome(false) // If there is a saved API Key, the welcome interface will not be displayed.
     }
 
     // If there is no saved configuration, the language-based default configuration is used
@@ -577,6 +584,7 @@ export default function CharacterCardGenerator() {
           apiBaseUrl,
           model: imageModel,
           prompt: prompts.imageAnalysis,
+          messages,
         }),
       })
 
@@ -898,93 +906,6 @@ export default function CharacterCardGenerator() {
 
   const openExportDialog = () => {
     setIsExportDialogOpen(true)
-  }
-
-  const exportAsJson = () => {
-    const dataStr = JSON.stringify(characterData, null, 2)
-    const dataBlob = new Blob([dataStr], { type: 'application/json' })
-    const url = URL.createObjectURL(dataBlob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${characterData.data.name || 'character'}.json`
-    link.click()
-    URL.revokeObjectURL(url)
-    setIsExportDialogOpen(false)
-  }
-
-  const exportAsPng = async () => {
-    try {
-      if (!characterImage || characterImage.includes('placeholder.svg')) {
-        alert(interfaceLanguage === 'zh' ? '请先上传一张图片' : 'Please upload an image first')
-        return
-      }
-
-      // 创建一个Image对象来加载原始图片
-      const img = new window.Image()
-      img.crossOrigin = 'anonymous' // Handle cross-domain issues
-
-      const imageLoadPromise = new Promise<HTMLCanvasElement>((resolve, reject) => {
-        img.onload = () => {
-          // 创建Canvas来将图片转换为PNG格式
-          const canvas = document.createElement('canvas')
-          const ctx = canvas.getContext('2d')
-
-          if (!ctx) {
-            reject(new Error('无法创建Canvas上下文'))
-            return
-          }
-
-          // 设置Canvas尺寸与原图相同
-          canvas.width = img.width
-          canvas.height = img.height
-
-          // 在Canvas上绘制图片
-          ctx.drawImage(img, 0, 0)
-
-          resolve(canvas)
-        }
-
-        img.onerror = () => {
-          reject(new Error('图片加载失败'))
-        }
-      })
-
-      img.src = characterImage
-      const canvas = await imageLoadPromise
-
-      // 将Canvas转换为PNG格式的Blob
-      const pngBlob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((blob) => {
-          if (blob) {
-            resolve(blob)
-          } else {
-            reject(new Error('Canvas转换为PNG失败'))
-          }
-        }, 'image/png')
-      })
-
-      // 将PNG Convert Blob to ArrayBuffer
-      const pngArrayBuffer = await pngBlob.arrayBuffer()
-
-      // Convert role data to JSON string
-      const cardData = JSON.stringify(characterData)
-
-      // 使用Png.Generate generates PNG with character card data
-      const pngWithData = Png.Generate(pngArrayBuffer, cardData, { version: 'v2' })
-
-      // Create download link
-      const dataBlob = new Blob([pngWithData], { type: 'image/png' })
-      const url = URL.createObjectURL(dataBlob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${characterData.data.name || 'character'}.png`
-      link.click()
-      URL.revokeObjectURL(url)
-      setIsExportDialogOpen(false)
-    } catch (error) {
-      console.error('PNG export failed:', error)
-      alert('PNG导出失败: ' + (error as Error).message)
-    }
   }
 
   // Check whether the image has been uploaded (not the default placeholder) or the image upload has been skipped
@@ -1379,7 +1300,7 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
       console.error('Fallback copy method failed:', error)
 
       //Final downgrade plan: display the full content in the console for copying
-      console.log0('==================== 事件书提示词 / Event Book Prompt ====================')
+      console.log('==================== 事件书提示词 / Event Book Prompt ====================')
       console.log(prompt)
       console.log('==================================================================')
 
@@ -1730,11 +1651,14 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
                 </CardHeader>
                 <CardContent className='flex-1 overflow-y-auto min-h-0'>
                   <Tabs defaultValue='basic' className='w-full h-full flex flex-col'>
-                    <TabsList className='grid w-full grid-cols-4 flex-shrink-0'>
+                    <TabsList className={`grid w-full ${FEATURE_FLAGS.SHOW_EVENT_BOOK ? 'grid-cols-5' : 'grid-cols-4'} flex-shrink-0`}>
                       <TabsTrigger value='basic'>{t.basic}</TabsTrigger>
                       <TabsTrigger value='advanced'>{t.advanced}</TabsTrigger>
                       <TabsTrigger value='meta'>{t.meta}</TabsTrigger>
                       <TabsTrigger value='character-book'>{interfaceLanguage === 'zh' ? '角色书' : 'Book'}</TabsTrigger>
+                      {FEATURE_FLAGS.SHOW_EVENT_BOOK && (
+                        <TabsTrigger value='event-book'>{t.eventBook}</TabsTrigger>
+                      )}
                     </TabsList>
 
                     <TabsContent value='basic' className='space-y-4 flex-1 overflow-y-auto'>
@@ -1914,14 +1838,13 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
                           ))}
                         </div>
                       </div>
+                    </TabsContent>
 
-                      {/* event book paragraph - Only displayed when the function switch is turned on */}
-                      {FEATURE_FLAGS.SHOW_EVENT_BOOK && (
-                        <div className='border-t pt-4'>
+                    {FEATURE_FLAGS.SHOW_EVENT_BOOK && (
+                      <TabsContent value='event-book' className='space-y-4 flex-1 overflow-y-auto'>
+                        <div className='pt-2'>
                           <div className='mb-2'>
-                            <Label className='text-base font-medium'>
-                              {interfaceLanguage === 'zh' ? '事件书' : 'Event Book'}
-                            </Label>
+                            <Label className='text-base font-medium'>{t.eventBook}</Label>
                           </div>
 
                           <div className='text-sm text-gray-600 mb-3'>
@@ -1981,7 +1904,6 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
                                   {interfaceLanguage === 'zh' ? '编辑' : 'Edit'}
                                 </Button>
                                 <Button onClick={downloadEventBook} size='sm' variant='outline'>
-                                  {/* <Download className="w-4 h-4 mr-1" /> */}
                                   {interfaceLanguage === 'zh' ? '下载' : 'Download'}
                                 </Button>
                                 <Button onClick={deleteEventBook} size='sm' variant='destructive'>
@@ -1991,8 +1913,8 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
                             )}
                           </div>
                         </div>
-                      )}
-                    </TabsContent>
+                      </TabsContent>
+                    )}
 
                     <TabsContent value='character-book' className='flex-1 overflow-y-auto'>
                       <CharacterBookManager
@@ -2226,13 +2148,14 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
                   </CardHeader>
                   <CardContent className='flex-1 overflow-y-auto'>
                     <Tabs defaultValue='basic' className='w-full h-full flex flex-col'>
-                      <TabsList className='grid w-full grid-cols-4 flex-shrink-0 text-xs'>
+                      <TabsList className={`grid w-full ${FEATURE_FLAGS.SHOW_EVENT_BOOK ? 'grid-cols-5' : 'grid-cols-4'} flex-shrink-0 text-xs`}>
                         <TabsTrigger value='basic'>{t.basic}</TabsTrigger>
                         <TabsTrigger value='advanced'>{t.advanced}</TabsTrigger>
                         <TabsTrigger value='meta'>{t.meta}</TabsTrigger>
-                        <TabsTrigger value='character-book'>
-                          {interfaceLanguage === 'zh' ? '角色书' : 'Book'}
-                        </TabsTrigger>
+                        <TabsTrigger value='character-book'>{interfaceLanguage === 'zh' ? '角色书' : 'Book'}</TabsTrigger>
+                        {FEATURE_FLAGS.SHOW_EVENT_BOOK && (
+                          <TabsTrigger value='event-book'>{t.eventBook}</TabsTrigger>
+                        )}
                       </TabsList>
 
                       <TabsContent value='basic' className='space-y-4 flex-1 overflow-y-auto'>
@@ -2413,14 +2336,13 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
                             ))}
                           </div>
                         </div>
+                      </TabsContent>
 
-                        {/* event book paragraph - Mobile version - Only displayed when the function switch is turned on */}
-                        {FEATURE_FLAGS.SHOW_EVENT_BOOK && (
-                          <div className='border-t pt-4'>
+                      {FEATURE_FLAGS.SHOW_EVENT_BOOK && (
+                        <TabsContent value='event-book' className='space-y-4 flex-1 overflow-y-auto'>
+                          <div className='pt-2'>
                             <div className='mb-2'>
-                              <Label className='text-base font-medium'>
-                                {interfaceLanguage === 'zh' ? '事件书' : 'Event Book'}
-                              </Label>
+                              <Label className='text-base font-medium'>{t.eventBook}</Label>
                             </div>
 
                             <div className='text-sm text-gray-600 mb-3'>
@@ -2495,8 +2417,8 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
                               )}
                             </div>
                           </div>
-                        )}
-                      </TabsContent>
+                        </TabsContent>
+                      )}
 
                       <TabsContent value='character-book' className='flex-1 overflow-y-auto'>
                         <CharacterBookManager
@@ -2568,8 +2490,14 @@ Numbers increment by 10 (${eventNumbers}). In event descriptions, use {{user}} f
         interfaceLanguage={interfaceLanguage}
         isOpen={isExportDialogOpen}
         onOpenChange={setIsExportDialogOpen}
-        onExportJson={exportAsJson}
-        onExportPng={exportAsPng}
+        onExportJson={() => {
+          utilsExportAsJson(characterData)
+          setIsExportDialogOpen(false)
+        }}
+        onExportPng={async () => {
+          await utilsExportAsPng(characterData, characterImage)
+          setIsExportDialogOpen(false)
+        }}
         hasRealImage={!!(characterImage && !characterImage.includes('placeholder.svg'))}
       />
 

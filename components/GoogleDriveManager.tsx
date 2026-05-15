@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState, useEffect } from 'react'
 import { useSession, signIn, signOut } from 'next-auth/react'
@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Cloud, CloudOff, Upload, Download, RefreshCw, Trash2, FileText, Calendar } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import type { TavernCardV2 } from '@/lib/types'
+import type { TavernCardV2 } from '@/types/types'
 
 interface GoogleDriveFile {
   id: string
@@ -27,12 +27,12 @@ interface GoogleDriveManagerProps {
   onLoadCharacterData: (data: TavernCardV2, image?: string, messages?: any[]) => void
 }
 
-export function GoogleDriveManager({ 
-  interfaceLanguage, 
-  characterData, 
+export function GoogleDriveManager({
+  interfaceLanguage,
+  characterData,
   characterImage,
   chatMessages,
-  onLoadCharacterData 
+  onLoadCharacterData,
 }: GoogleDriveManagerProps) {
   const { data: session, status } = useSession()
   const { toast } = useToast()
@@ -44,12 +44,12 @@ export function GoogleDriveManager({
 
   // Check if Google OAuth is configured
   const [isGoogleConfigured, setIsGoogleConfigured] = useState(false)
-  
+
   useEffect(() => {
     // Check if Google configuration is available by trying to get provider info
     fetch('/api/auth/providers')
-      .then(res => res.json())
-      .then(providers => {
+      .then((res) => res.json())
+      .then((providers) => {
         setIsGoogleConfigured(!!providers.google)
       })
       .catch(() => {
@@ -123,7 +123,7 @@ export function GoogleDriveManager({
       saveError: 'Save failed',
       listError: 'Failed to load file list',
       signInPrompt: 'Please sign in to your Google account',
-    }
+    },
   }[interfaceLanguage]
 
   // 处理API响应，检查是否需要重新授权
@@ -136,11 +136,7 @@ export function GoogleDriveManager({
         description: t.reauthorizeNeeded,
         variant: 'destructive',
         action: (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => signIn('google')}
-          >
+          <Button variant='outline' size='sm' onClick={() => signIn('google')}>
             {t.reauthorize}
           </Button>
         ),
@@ -173,11 +169,7 @@ export function GoogleDriveManager({
         description: t.reauthorizeNeeded,
         variant: 'destructive',
         action: (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => signIn('google')}
-          >
+          <Button variant='outline' size='sm' onClick={() => signIn('google')}>
             {t.reauthorize}
           </Button>
         ),
@@ -193,13 +185,8 @@ export function GoogleDriveManager({
     try {
       const response = await fetch('/api/google-drive/list', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          accessToken: session.accessToken,
-          interfaceLanguage,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken: session.accessToken, interfaceLanguage }),
       })
 
       const data = await handleApiResponse(response, 'Load files')
@@ -208,11 +195,7 @@ export function GoogleDriveManager({
       }
     } catch (error) {
       console.error('Error loading files:', error)
-      toast({
-        title: t.errorOccurred,
-        description: t.listError,
-        variant: 'destructive',
-      })
+      toast({ title: t.errorOccurred, description: t.listError, variant: 'destructive' })
     } finally {
       setIsLoading(false)
     }
@@ -222,11 +205,7 @@ export function GoogleDriveManager({
   const saveFile = async () => {
     if (!session?.accessToken) return
     if (!saveFileName.trim()) {
-      toast({
-        title: t.errorOccurred,
-        description: t.enterFileName,
-        variant: 'destructive',
-      })
+      toast({ title: t.errorOccurred, description: t.enterFileName, variant: 'destructive' })
       return
     }
 
@@ -234,9 +213,7 @@ export function GoogleDriveManager({
     try {
       const response = await fetch('/api/google-drive/save', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           accessToken: session.accessToken,
           characterData,
@@ -249,19 +226,12 @@ export function GoogleDriveManager({
 
       const data = await handleApiResponse(response, 'Save file')
       if (data) {
-        toast({
-          title: t.saveSuccess,
-          description: data.message,
-        })
+        toast({ title: t.saveSuccess, description: data.message })
         loadFiles() // 刷新文件列表
       }
     } catch (error) {
       console.error('Error saving file:', error)
-      toast({
-        title: t.errorOccurred,
-        description: t.saveError,
-        variant: 'destructive',
-      })
+      toast({ title: t.errorOccurred, description: t.saveError, variant: 'destructive' })
     } finally {
       setIsSaving(false)
     }
@@ -275,32 +245,19 @@ export function GoogleDriveManager({
     try {
       const response = await fetch('/api/google-drive/load', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          accessToken: session.accessToken,
-          fileId,
-          interfaceLanguage,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken: session.accessToken, fileId, interfaceLanguage }),
       })
 
       const data = await handleApiResponse(response, 'Load file')
       if (data) {
         onLoadCharacterData(data.characterData, data.characterImage, data.chatMessages)
-        toast({
-          title: t.loadSuccess,
-          description: data.message,
-        })
+        toast({ title: t.loadSuccess, description: data.message })
         setIsOpen(false)
       }
     } catch (error) {
       console.error('Error loading file:', error)
-      toast({
-        title: t.errorOccurred,
-        description: t.loadError,
-        variant: 'destructive',
-      })
+      toast({ title: t.errorOccurred, description: t.loadError, variant: 'destructive' })
     } finally {
       setIsLoading(false)
     }
@@ -336,50 +293,46 @@ export function GoogleDriveManager({
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full sm:w-auto">
-          <Cloud className="w-4 h-4 mr-2" />
+        <Button variant='outline' size='sm' className='w-full sm:w-auto'>
+          <Cloud className='w-4 h-4 mr-2' />
           {t.googleDrive}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+      <DialogContent className='max-w-2xl max-h-[80vh] flex flex-col'>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Cloud className="w-5 h-5" />
+          <DialogTitle className='flex items-center gap-2'>
+            <Cloud className='w-5 h-5' />
             {t.googleDrive}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden">
+        <div className='flex-1 overflow-hidden'>
           {status === 'loading' ? (
-            <div className="flex items-center justify-center py-8">
-              <RefreshCw className="w-6 h-6 animate-spin" />
+            <div className='flex items-center justify-center py-8'>
+              <RefreshCw className='w-6 h-6 animate-spin' />
             </div>
           ) : !session ? (
-            <div className="text-center py-8">
-              <CloudOff className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground mb-4">
-                {t.signInPrompt}
-              </p>
-              <Button onClick={() => signIn('google')}>
-                {t.signIn}
-              </Button>
+            <div className='text-center py-8'>
+              <CloudOff className='w-12 h-12 mx-auto mb-4 text-muted-foreground' />
+              <p className='text-muted-foreground mb-4'>{t.signInPrompt}</p>
+              <Button onClick={() => signIn('google')}>{t.signIn}</Button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className='space-y-4'>
               {/* 用户信息 */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <img 
-                    src={session.user?.image || ''} 
-                    alt={session.user?.name || ''} 
-                    className="w-8 h-8 rounded-full"
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-2'>
+                  <img
+                    src={session.user?.image || ''}
+                    alt={session.user?.name || ''}
+                    className='w-8 h-8 rounded-full'
                   />
                   <div>
-                    <p className="text-sm font-medium">{session.user?.name}</p>
-                    <p className="text-xs text-muted-foreground">{session.user?.email}</p>
+                    <p className='text-sm font-medium'>{session.user?.name}</p>
+                    <p className='text-xs text-muted-foreground'>{session.user?.email}</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => signOut()}>
+                <Button variant='outline' size='sm' onClick={() => signOut()}>
                   {t.signOut}
                 </Button>
               </div>
@@ -387,10 +340,10 @@ export function GoogleDriveManager({
               <Separator />
 
               {/* 保存部分 */}
-              <div className="space-y-3">
-                <Label className="text-base font-medium">{t.saveToCloud}</Label>
-                <div className="flex gap-2">
-                  <div className="flex-1">
+              <div className='space-y-3'>
+                <Label className='text-base font-medium'>{t.saveToCloud}</Label>
+                <div className='flex gap-2'>
+                  <div className='flex-1'>
                     <Input
                       value={saveFileName}
                       onChange={(e) => setSaveFileName(e.target.value)}
@@ -400,12 +353,12 @@ export function GoogleDriveManager({
                   <Button onClick={saveFile} disabled={isSaving}>
                     {isSaving ? (
                       <>
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        <RefreshCw className='w-4 h-4 mr-2 animate-spin' />
                         {t.saving}
                       </>
                     ) : (
                       <>
-                        <Upload className="w-4 h-4 mr-2" />
+                        <Upload className='w-4 h-4 mr-2' />
                         {t.save}
                       </>
                     )}
@@ -416,48 +369,43 @@ export function GoogleDriveManager({
               <Separator />
 
               {/* 加载部分 */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-medium">{t.loadFromCloud}</Label>
-                  <Button variant="outline" size="sm" onClick={loadFiles} disabled={isLoading}>
+              <div className='space-y-3'>
+                <div className='flex items-center justify-between'>
+                  <Label className='text-base font-medium'>{t.loadFromCloud}</Label>
+                  <Button variant='outline' size='sm' onClick={loadFiles} disabled={isLoading}>
                     <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                   </Button>
                 </div>
 
-                <ScrollArea className="h-64 border rounded-md">
+                <ScrollArea className='h-64 border rounded-md'>
                   {files.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                      <FileText className="w-8 h-8 mb-2" />
+                    <div className='flex flex-col items-center justify-center py-8 text-muted-foreground'>
+                      <FileText className='w-8 h-8 mb-2' />
                       <p>{t.noFiles}</p>
                     </div>
                   ) : (
-                    <div className="p-4 space-y-2">
+                    <div className='p-4 space-y-2'>
                       {files.map((file) => (
                         <div
                           key={file.id}
-                          className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                          className='flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors'
                         >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-blue-500" />
-                              <span className="font-medium truncate">{file.name}</span>
+                          <div className='flex-1 min-w-0'>
+                            <div className='flex items-center gap-2'>
+                              <FileText className='w-4 h-4 text-blue-500' />
+                              <span className='font-medium truncate'>{file.name}</span>
                             </div>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
+                            <div className='flex items-center gap-4 text-xs text-muted-foreground mt-1'>
+                              <span className='flex items-center gap-1'>
+                                <Calendar className='w-3 h-3' />
                                 {formatTime(file.modifiedTime)}
                               </span>
                               <span>{formatFileSize(file.size)}</span>
                             </div>
                           </div>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => loadFile(file.id)}
-                              disabled={isLoading}
-                            >
-                              <Download className="w-4 h-4" />
+                          <div className='flex gap-1'>
+                            <Button variant='outline' size='sm' onClick={() => loadFile(file.id)} disabled={isLoading}>
+                              <Download className='w-4 h-4' />
                             </Button>
                           </div>
                         </div>
@@ -472,4 +420,4 @@ export function GoogleDriveManager({
       </DialogContent>
     </Dialog>
   )
-} 
+}

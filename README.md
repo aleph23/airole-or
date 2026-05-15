@@ -1,4 +1,5 @@
 # AIRole - Effortless AI Character Card Creator
+
 ![](images/logo.png)
 
 ✨ Create character cards from a single image with just a few clicks!
@@ -7,10 +8,7 @@ An incredibly simple and user-friendly open-source AI character card generator. 
 
 **🚀 Super simple workflow: Upload Image → AI Analysis & Generation → Fine-tune → Export & Use**
 
-
-
 https://github.com/user-attachments/assets/8e8af9d5-be66-4933-9dc8-ca2fbf3bc23e
-
 
 ## Deploy with Vercel
 
@@ -42,12 +40,14 @@ After deployment, you can configure the environment variables in your Vercel das
 ### Manual Deployment
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/easychen/airole.git
    cd airole
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    # or
@@ -57,12 +57,15 @@ After deployment, you can configure the environment variables in your Vercel das
    ```
 
 3. **Set up environment variables** (optional)
+
    ```bash
-   cp .env.example .env.local
+   cp .env.example .env
    ```
+
    See [Configuration](#configuration) for details.
 
 4. **Run the development server**
+
    ```bash
    npm run dev
    # or
@@ -80,7 +83,7 @@ All features work without configuration, but you can enhance functionality by se
 
 ### Basic Configuration
 
-Create a `.env.local` file in your project root:
+Create a `.env` file in your project root:
 
 ```env
 # NextAuth.js (optional - required for Google features)
@@ -131,7 +134,7 @@ The application supports OpenAI-compatible AI models. Users can configure their 
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm/yarn/pnpm
 
 ### Local Development
@@ -176,19 +179,22 @@ npm run start
 ### Themes
 
 The application supports multiple themes:
+
 - Light mode
-- Dark mode  
+- Dark mode
 - System preference
 
 ### Languages
 
 Currently supported languages:
+
 - English
 - Chinese (Simplified)
 
 ### Models
 
 Configurable OpenAI-compatible models for different purposes:
+
 - Image analysis models
 - Character generation models
 - AI assistant models
@@ -241,4 +247,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
     <a href="https://github.com/easychen/airole">⭐ Star us on GitHub</a> •
     <a href="https://vercel.com/new/git/external?repository-url=https://github.com/easychen/airole">🚀 Deploy to Vercel</a>
   </p>
-</div> 
+</div>

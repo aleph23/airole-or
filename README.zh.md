@@ -37,12 +37,14 @@
 ### 手动部署
 
 1. **克隆仓库**
+
    ```bash
    git clone https://github.com/easychen/airole.git
    cd airole
    ```
 
 2. **安装依赖**
+
    ```bash
    npm install
    # 或
@@ -52,12 +54,15 @@
    ```
 
 3. **设置环境变量**（可选）
+
    ```bash
-   cp .env.example .env.local
+   cp .env.example .env
    ```
+
    详情请参阅[配置](#配置)部分。
 
 4. **运行开发服务器**
+
    ```bash
    npm run dev
    # 或
@@ -75,7 +80,7 @@
 
 ### 基本配置
 
-在项目根目录创建 `.env.local` 文件：
+在项目根目录创建 `.env` 文件：
 
 ```env
 # NextAuth.js（Google 功能必需）
@@ -171,6 +176,7 @@ npm run start
 ### 主题
 
 应用程序支持多种主题：
+
 - 浅色模式
 - 深色模式
 - 系统偏好
@@ -178,12 +184,14 @@ npm run start
 ### 语言
 
 目前支持的语言：
+
 - 英语
 - 中文（简体）
 
 ### 模型
 
 可配置的兼容 OpenAI API 的模型用于不同目的：
+
 - 图像分析模型
 - 角色生成模型
 - AI 助手模型
@@ -236,4 +244,4 @@ npm run start
     <a href="https://github.com/easychen/airole">⭐ 在 GitHub 上给我们星标</a> •
     <a href="https://vercel.com/new/git/external?repository-url=https://github.com/easychen/airole">🚀 部署到 Vercel</a>
   </p>
-</div> 
+</div>

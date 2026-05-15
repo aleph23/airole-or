@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import { TavernCardV2 } from './types'
+import { TavernCardV2 } from '@/types/types'
 import { Png } from './Png'
 
 export function cn(...inputs: ClassValue[]) {

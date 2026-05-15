@@ -34,44 +34,6 @@ To enable Google Drive integration:
    GOOGLE_CLIENT_SECRET=your-google-client-secret
    ```
 
-## 🐳 Docker
-
-### Build Docker Image
-
-```bash
-# Clone the repository
-git clone https://github.com/easychen/airole.git
-cd airole
-
-# Build the image
-docker build -t airole .
-
-# Run the container
-docker run -p 3000:3000 airole
-```
-
-### Docker Compose
-
-Create a `docker-compose.yml` file:
-
-```yaml
-version: '3.8'
-services:
-  airole:
-    build: .
-    ports:
-      - "3000:3000"
-    environment:
-      - NEXTAUTH_URL=http://localhost:3000
-      - NEXTAUTH_SECRET=your-secret-here
-      # Add other environment variables as needed
-```
-
-Run with:
-```bash
-docker-compose up
-```
-
 ## ☁️ Other Platforms
 
 ### Netlify
@@ -102,15 +64,15 @@ docker-compose up
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 22+
 - PM2 (for process management)
 
 ### Steps
 
 ```bash
 # Clone and setup
-git clone https://github.com/easychen/airole.git
-cd airole
+git clone https://github.com/aleph23/airole-or.git
+cd airole-or
 npm install
 
 # Build the application
@@ -120,7 +82,7 @@ npm run build
 npm install -g pm2
 
 # Start with PM2
-pm2 start npm --name "airole" -- start
+pm2 start npm --name "airole-or" -- start
 
 # Save PM2 configuration
 pm2 save
@@ -186,7 +148,7 @@ server {
 
 ### Getting Help
 
-- Check [GitHub Issues](https://github.com/easychen/airole/issues)
+- Check [GitHub Issues](https://github.com/aleph23/airole-or/issues)
 - Join our community discussions
 - Review the [troubleshooting guide](USER_GUIDE.md)
 
@@ -199,4 +161,4 @@ server {
 - [ ] Performance monitoring enabled
 - [ ] Security headers configured
 - [ ] Domain and DNS configured
-- [ ] SSL certificate installed 
+- [ ] SSL certificate installed

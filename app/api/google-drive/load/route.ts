@@ -5,7 +5,7 @@ import { UI_TEXTS } from '@/lib/i18n'
 export async function POST(request: NextRequest) {
   const { accessToken, fileId, interfaceLanguage = 'en' } = await request.json()
   const t = UI_TEXTS[interfaceLanguage as 'zh' | 'en'] || UI_TEXTS.en
-  
+
   try {
     // Check if Google OAuth is configured
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
@@ -20,45 +20,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: t.googleDriveMessages.fileNotFound }, { status: 400 })
     }
 
-    // 创建Google Drive客户端
+    // create google Drive client
     const oauth2Client = new google.auth.OAuth2()
     oauth2Client.setCredentials({ access_token: accessToken })
-    
+
     const drive = google.drive({ version: 'v3', auth: oauth2Client })
 
-    // 获取文件内容
-    const response = await drive.files.get({
-      fileId,
-      alt: 'media',
-    })
+    // Get file content
+    const response = await drive.files.get({ fileId, alt: 'media' })
 
     if (!response.data) {
       return NextResponse.json({ error: t.googleDriveMessages.fileNotFound }, { status: 404 })
     }
 
-    // 解析JSON数据
+    // Parse json data
     let loadedData
     try {
-      loadedData = typeof response.data === 'string' 
-        ? JSON.parse(response.data) 
-        : response.data
+      loadedData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data
     } catch (parseError) {
-      return NextResponse.json({ 
-        error: t.googleDriveMessages.invalidFileFormat,
-        details: t.googleDriveMessages.invalidFileFormat
-      }, { status: 400 })
+      return NextResponse.json(
+        { error: t.googleDriveMessages.invalidFileFormat, details: t.googleDriveMessages.invalidFileFormat },
+        { status: 400 }
+      )
     }
 
-    // 检查数据格式，支持新旧格式
+    // Check data format, support new and old formats
     let characterData, characterImage, chatMessages
-    
+
     if (loadedData.characterData) {
-      // 新格式：包含完整数据包
+      // New format: contains complete data package
       characterData = loadedData.characterData
       characterImage = loadedData.characterImage
       chatMessages = loadedData.chatMessages || []
     } else {
-      // 旧格式：只有角色数据
+      // Old format: only character data
       characterData = loadedData
       characterImage = null
       chatMessages = []
@@ -69,14 +64,16 @@ export async function POST(request: NextRequest) {
       characterData,
       characterImage,
       chatMessages,
-      message: t.googleDriveMessages.loadSuccess
+      message: t.googleDriveMessages.loadSuccess,
     })
-
   } catch (error) {
-    console.error('从Google Drive加载失败:', error)
-    return NextResponse.json({ 
-      error: t.googleDriveMessages.loadError,
-      details: error instanceof Error ? error.message : t.googleDriveMessages.unknownError
-    }, { status: 500 })
+    console.error('Google Drive failed to load:', error)
+    return NextResponse.json(
+      {
+        error: t.googleDriveMessages.loadError,
+        details: error instanceof Error ? error.message : t.googleDriveMessages.unknownError,
+      },
+      { status: 500 }
+    )
   }
-} 
+}
