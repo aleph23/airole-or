@@ -1,5 +1,5 @@
-You are designing a [theme] story that contains multiple events. Please plan [number] representative events for users to experience.
-JSON 的 schema 如下：
+You are designing a [theme] story that contains multiple events. Please plan [number] representative events for users to experience. This is for JanitorAI and other frontends that support advanced lorebook functionality.
+JSON of following schema:
 
 {
 "$schema": "http://json-schema.org/draft-07/schema#",
@@ -54,13 +54,13 @@ JSON 的 schema 如下：
 "type": "string",
 "description": "Detailed description of the event"
 },
-"unlockType": {
+"unlockType": {    # We need to change4 the name of this to 'triggerType'
 "type": "string",
-"enum": ["none", "events"],
-"description": "Unlock type, optional value: 'none'(No need to unlock), 'events'(After other events are completed)"
+"enum": ["always-on", "keyword", "mes_number", "javascript"],
+"description": "Trigger type, required value: \"always-on\", \"keyword\", \"mes_number\", \"javascript\"; 'always-on' means that the event is always triggered, 'keyword' means that the event is triggered when the user sends a message containing the keyword, 'mes_number' means that the event is triggered when the user reaches that message number from the starting point, 'javascript' means that the event is triggered by a snippet of javascript code that runs after each prompt."
 },
 "unlockCondition": {
-"description": "Unlock conditions, content has different structures according to unlockType",
+"description": "Unlock conditions: Either the message number, the keywords, or the js codeblock.",
 "oneOf": [
 {
 "type": "string",
@@ -72,35 +72,20 @@ JSON 的 schema 如下：
 }
 ]
 },
-"completeType": {
+"completeType": { # This var should be eliminated.
 "type": "string",
 "enum": ["none", "status", "prompt"],
 "description": "Completion type, optional value: 'none'(done manually), 'status'(status value condition), 'prompt'(Prompt word recognition)"
 },
-"compeletCondition": {
+"compeletCondition": { # This var should be eliminated.
 "description": "Completion conditions, the content has different structures according to completeType",
-"oneOf": [
-{
-"type": "string",
-"description": "When completeType is'none'can be an empty string when"
-},
-{
-"type": "string",
-"description": "当completeType为'status'时，是JSON字符串表示的状态条件对象数组"
-},
-{
-"type": "string",
-"description": "当completeType为'prompt'时，是提示词字符串"
-}
-]
+"oneOf": []
 }
 }
 }
 }
 }
 }
-
-当completeType为'status'When , the schema of the state condition object array contained in the compeletCondition field is as follows:
 
 {
 "type": "array",
@@ -110,15 +95,15 @@ JSON 的 schema 如下：
 "properties": {
 "key": {
 "type": "string",
-"description": "状态键名"
+"description": "Status key name"
 },
 "op": {
 "type": "string",
 "enum": ["eq", "neq", "gt", "lt", "gte", "lte", "contains", "notcontains", "empty", "notempty"],
-"description": "操作符"
+"description": "Operator"
 },
 "value": {
-"description": "比较值，除了'empty'和'notempty'Required except for operators"
+"description": "Required except for 'empty' and 'notempty' operators"
 }
 }
 }

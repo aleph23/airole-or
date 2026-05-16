@@ -36,12 +36,7 @@ import {
   getLanguageSpecificModelOptions,
   FEATURE_FLAGS,
 } from '@/lib/constants'
-import {
-  TavernCardV2,
-  ChatMessage,
-  CharacterVersion,
-  FeatureContext,
-} from '@/types/types'
+import { TavernCardV2, ChatMessage, CharacterVersion } from '@/types/types'
 import { detectSystemLanguage, UI_TEXTS } from '@/lib/i18n'
 import {
   extractJsonFromContent,
