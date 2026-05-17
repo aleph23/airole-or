@@ -20,7 +20,7 @@ export type TavernCardV2 = {
   }
 }
 
-// 添加事件书相关类型定义
+// Add event book related type definitions
 export type EventBookCondition = {
   key: string
   op: "eq" | "neq" | "gt" | "lt" | "gte" | "lte" | "contains" | "notcontains" | "empty" | "notempty"
@@ -49,7 +49,7 @@ export type EventBook = {
   events: EventBookEvent[]
 }
 
-// 扩展角色数据类型以包含事件书（但不包含在导出的角色卡中）
+// Extended character data type to include event books (but not included in exported character cards)
 export type ExtendedCharacterData = TavernCardV2 & {
   eventBook?: EventBook
 }
